@@ -1,22 +1,48 @@
 import pymysql
+import traceback
 
-def createTableByExcel(sql, dburl, username, password, dbName, charset='utf8'):
+class DBHander:
+
+    def __init__(self, dburl, username, password, dbName, charset='utf8', port=3306):
+        self.conn = pymysql.connect(host=dburl, port=port,  user=username, password=password, database=dbName, charset=charset)
+        self.curs = self.conn.cursor()
+        self.sheets = []
 
 
+    def createTableByExcel(self, sql):
 
-    conn = pymysql.connect(dburl, username, password, dbName, charset)
-    cur = conn.cursor()
-    cur.execute(sql)
+        self.curs.execute(sql)
+
+    def insert_datas_to_mysql(self, data_tuples, table_name):
+
+        for data_tuple in data_tuples:
+            try:
+                sql = 'insert into '+table_name+'('+','.join(self.sheets) + ') values (' + ','.join(data_tuple)+')'
+                print(sql)
+                self.curs.execute(sql)
+                return True
+            except:
+                print('**********************************insert data :'+ str(data_tuple)+'fail!')
+                traceback.print_exc()
+                return False
 
 
-def genSQLbySheetName(tableName, sheets):
+    def genSQLbySheetName(self, tableName, sheets):
 
-    startStr = 'create table '+tableName+'( uuid() int(30),'
-    sqlList = []
+        self.sheets = sheets
+        startStr = 'create table '+tableName+'( id int(10) primary key auto_increment, '
+        sqlList = []
 
-    for value in sheets:
-        sqlList.append(value+' varchar(400)')
+        for value in sheets:
+            sqlList.append(value+' varchar(400)')
 
-    sqlStr = startStr + ' ,'.join(sqlList) + ')'  #拼接sql
+        sqlStr = startStr + ' ,'.join(sqlList) + ', result varchar(20))'  #拼接sql
+        print(sqlStr+'$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+        try:
+            self.curs.execute(sqlStr)
+            return True
+        except:
+            print('create table failed')
+            traceback.print_exc()
+            return False
 
-    return sqlStr
